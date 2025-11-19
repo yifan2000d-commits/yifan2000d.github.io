@@ -3,510 +3,535 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>和平精英地铁战术终端 | Metro Tactics Terminal</title>
+    <title>METRO OPS | 战术数据中心</title>
     <script src="https://unpkg.com/vue@3/dist/vue.global.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
     <style>
         :root {
-            --bg-dark: #0f0f12;
-            --bg-panel: #18181c;
-            --bg-card: #232329;
-            --accent: #00f2ff; /* 赛博蓝 */
-            --accent-glow: rgba(0, 242, 255, 0.15);
-            --tier-0: #f1c40f; /* 金色 T0 */
-            --tier-1: #e74c3c; /* 红色 T1 */
-            --tier-2: #9b59b6; /* 紫色 T2 */
-            --tier-3: #95a5a6; /* 灰色 T3 */
-            --text-main: #ececf1;
-            --text-muted: #8b8b96;
-            --compare: #ff4757;
+            --bg-core: #0b0c10;
+            --bg-panel: #1f2833;
+            --text-bright: #66fcf1;
+            --text-dim: #45a29e;
+            --text-body: #c5c6c7;
+            
+            --t0: #f1c40f;
+            --t1: #e74c3c;
+            --t2: #9b59b6;
+            --t3: #95a5a6;
         }
+
+        * { box-sizing: border-box; }
 
         body {
             margin: 0;
-            font-family: 'Segoe UI', 'Roboto', sans-serif;
-            background-color: var(--bg-dark);
-            color: var(--text-main);
+            font-family: 'Segoe UI', Roboto, Helvetica, sans-serif;
+            background-color: var(--bg-core);
+            color: var(--text-body);
             height: 100vh;
-            overflow: hidden;
             display: flex;
+            overflow: hidden;
         }
 
-        /* 滚动条 */
-        ::-webkit-scrollbar { width: 6px; height: 6px; }
-        ::-webkit-scrollbar-thumb { background: #333; border-radius: 3px; }
-
-        /* 左侧侧边栏 */
+        /* 侧边栏 */
         .sidebar {
-            width: 300px;
-            background: var(--bg-panel);
+            width: 280px;
+            background: #151b24;
             border-right: 1px solid #333;
             display: flex;
             flex-direction: column;
-            z-index: 10;
+            flex-shrink: 0;
+            z-index: 100;
         }
 
         .brand {
-            padding: 25px 20px;
-            font-size: 20px;
-            font-weight: 800;
-            color: var(--text-main);
-            letter-spacing: 1px;
-            border-bottom: 1px solid #2a2a2a;
-            display: flex;
-            align-items: center;
-            gap: 10px;
+            padding: 20px;
+            font-size: 18px;
+            font-weight: 900;
+            color: var(--text-bright);
+            letter-spacing: 2px;
+            background: rgba(0,0,0,0.2);
+            border-bottom: 1px solid #333;
+            cursor: pointer;
+            transition: 0.3s;
         }
-        .brand i { color: var(--accent); }
+        .brand:hover { background: rgba(102, 252, 241, 0.1); }
+
+        .search-container { padding: 15px; }
+        .search-input {
+            width: 100%;
+            background: #0b0c10;
+            border: 1px solid #45a29e;
+            padding: 10px;
+            color: white;
+            border-radius: 4px;
+            outline: none;
+        }
 
         .weapon-list {
             flex: 1;
             overflow-y: auto;
-            padding: 10px;
+            padding: 0 10px 20px 10px;
         }
+        
+        /* 滚动条美化 */
+        ::-webkit-scrollbar { width: 6px; }
+        ::-webkit-scrollbar-track { background: #0b0c10; }
+        ::-webkit-scrollbar-thumb { background: #45a29e; border-radius: 3px; }
 
-        .weapon-item {
+        .nav-item {
             padding: 12px 15px;
-            margin-bottom: 8px;
-            background: var(--bg-card);
-            border-radius: 6px;
+            margin-bottom: 5px;
+            border-radius: 4px;
             cursor: pointer;
-            transition: all 0.2s;
-            border-left: 3px solid transparent;
             display: flex;
             justify-content: space-between;
             align-items: center;
+            transition: all 0.2s;
+            border-left: 3px solid transparent;
         }
 
-        .weapon-item:hover { background: #2c2c35; }
-        .weapon-item.active {
-            background: var(--accent-glow);
-            border-left-color: var(--accent);
-        }
-        .weapon-item.comparing {
-            background: rgba(255, 71, 87, 0.1);
-            border-left-color: var(--compare);
+        .nav-item:hover { background: #1f2833; }
+        .nav-item.active {
+            background: rgba(69, 162, 158, 0.2);
+            border-left-color: var(--text-bright);
         }
 
-        .tier-tag {
-            font-size: 10px;
-            font-weight: bold;
-            padding: 2px 6px;
-            border-radius: 3px;
-            color: #000;
+        .tier-dot {
+            width: 8px; height: 8px; border-radius: 50%;
+            box-shadow: 0 0 5px currentColor;
         }
-        .t0 { background: var(--tier-0); }
-        .t1 { background: var(--tier-1); color: white; }
-        .t2 { background: var(--tier-2); color: white; }
-        .t3 { background: var(--tier-3); }
 
         /* 主视图区域 */
-        .main-view {
+        .main-content {
             flex: 1;
-            padding: 30px;
+            position: relative;
             overflow-y: auto;
-            display: flex;
-            flex-direction: column;
-            gap: 25px;
+            padding: 30px 40px;
+            background: radial-gradient(circle at top right, #1f2833 0%, #0b0c10 60%);
         }
 
-        /* 头部：武器名称与 TIER */
-        .header {
+        /* 首页：宏观仪表盘 */
+        .dashboard-view {
+            max-width: 1200px;
+            margin: 0 auto;
+            animation: fadeIn 0.5s ease;
+        }
+
+        .chart-container-lg {
+            background: var(--bg-panel);
+            border: 1px solid #333;
+            border-radius: 12px;
+            padding: 20px;
+            height: 600px; /* 大图高度 */
+            position: relative;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.5);
+        }
+
+        /* 详情页：武器分析 */
+        .detail-view {
+            max-width: 1100px;
+            margin: 0 auto;
+            animation: slideUp 0.4s ease;
+            padding-bottom: 50px; /* 防止底部被切 */
+        }
+
+        .header-section {
             display: flex;
             justify-content: space-between;
             align-items: flex-end;
-            padding-bottom: 20px;
-            border-bottom: 1px solid #333;
+            margin-bottom: 30px;
+            border-bottom: 1px solid #45a29e;
+            padding-bottom: 15px;
         }
+
+        .weapon-name { font-size: 48px; font-weight: 900; margin: 0; line-height: 1; text-transform: uppercase; color: var(--text-bright); }
+        .weapon-meta { color: var(--text-dim); letter-spacing: 1px; margin-top: 5px; }
         
-        .weapon-title h1 { margin: 0; font-size: 48px; text-transform: uppercase; line-height: 1; }
-        .weapon-title .type { color: var(--accent); font-size: 14px; letter-spacing: 2px; font-weight: bold; margin-bottom: 5px; display: block;}
-        
-        .tier-badge-lg {
-            font-size: 32px;
-            font-weight: 900;
-            padding: 5px 20px;
-            border-radius: 4px;
-            color: #000;
-            transform: skewX(-10deg);
-            box-shadow: 0 0 15px rgba(0,0,0,0.5);
+        .tier-badge {
+            font-size: 24px; font-weight: bold; padding: 5px 20px; border-radius: 4px;
+            color: #000; transform: skewX(-15deg);
         }
 
-        /* 网格布局 */
-        .grid-layout {
+        /* 卡片通用样式 */
+        .card-grid {
             display: grid;
-            grid-template-columns: 320px 1fr;
-            grid-template-rows: auto auto;
-            gap: 20px;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); /* 响应式网格 */
+            gap: 25px;
+            margin-bottom: 25px;
         }
 
-        .card {
-            background: var(--bg-panel);
-            border-radius: 12px;
-            padding: 20px;
-            border: 1px solid #2a2a2a;
-            position: relative;
-        }
-        .card h3 { margin: 0 0 15px 0; font-size: 14px; color: var(--text-muted); text-transform: uppercase; letter-spacing: 1px; display: flex; justify-content: space-between; align-items: center;}
-
-        /* 生态位数据 (Progress Bars) */
-        .meta-row {
-            margin-bottom: 15px;
-        }
-        .meta-label { display: flex; justify-content: space-between; font-size: 13px; margin-bottom: 5px; }
-        .progress-bg { height: 8px; background: #333; border-radius: 4px; overflow: hidden; position: relative;}
-        .progress-bar { height: 100%; border-radius: 4px; }
-        .bar-primary { background: var(--accent); }
-        .bar-compare { 
-            position: absolute; top: 0; left: 0; height: 100%; 
-            background: var(--compare); opacity: 0.7; 
-            border-top: 2px solid #000; /* 区分重叠 */
-        }
-
-        /* 战术参数列表 */
-        .tech-specs {
-            display: grid;
-            grid-template-columns: 1fr 1fr;
-            gap: 15px;
-        }
-        .spec-item { background: var(--bg-card); padding: 10px; border-radius: 6px; }
-        .spec-val { font-size: 18px; font-weight: bold; color: var(--text-main); }
-        .spec-key { font-size: 11px; color: var(--text-muted); }
-
-        /* Canvas 容器 */
-        .canvas-wrapper {
-            background: #000;
-            border-radius: 8px;
-            position: relative;
-            height: 450px;
+        .info-card {
+            background: rgba(31, 40, 51, 0.8);
             border: 1px solid #333;
+            border-radius: 8px;
+            padding: 20px;
+        }
+
+        .card-title {
+            color: var(--text-dim);
+            font-size: 12px;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            margin-bottom: 15px;
+            border-bottom: 1px solid rgba(255,255,255,0.1);
+            padding-bottom: 5px;
+            display: flex;
+            justify-content: space-between;
+        }
+
+        /* 数据条 */
+        .stat-row { margin-bottom: 12px; }
+        .stat-header { display: flex; justify-content: space-between; font-size: 13px; margin-bottom: 4px; }
+        .bar-track { height: 6px; background: #0b0c10; border-radius: 3px; overflow: hidden; }
+        .bar-fill { height: 100%; border-radius: 3px; transition: width 1s ease; }
+        
+        /* 弹道模拟器 */
+        .canvas-box {
+            background: #000;
+            border: 1px solid #45a29e;
+            border-radius: 8px;
+            height: 400px;
+            position: relative;
             overflow: hidden;
         }
-        
-        /* Canvas 切换 Tabs */
-        .canvas-tabs {
-            display: flex;
-            gap: 10px;
-            margin-bottom: 15px;
-        }
-        .tab-btn {
-            background: var(--bg-card);
-            border: 1px solid #333;
-            color: var(--text-muted);
-            padding: 6px 15px;
-            border-radius: 4px;
-            font-size: 12px;
-            cursor: pointer;
-        }
-        .tab-btn.active {
-            background: var(--accent);
-            color: #000;
-            font-weight: bold;
-            border-color: var(--accent);
-        }
 
-        .compare-float {
-            position: fixed;
-            bottom: 20px;
-            right: 20px;
-            background: var(--compare);
-            color: white;
-            padding: 10px 20px;
-            border-radius: 30px;
-            box-shadow: 0 5px 20px rgba(0,0,0,0.5);
-            font-weight: bold;
+        .canvas-controls {
+            margin-top: 15px;
             display: flex;
             align-items: center;
-            gap: 10px;
-            z-index: 100;
-            animation: slideIn 0.3s ease;
+            gap: 20px;
+            background: var(--bg-panel);
+            padding: 10px 20px;
+            border-radius: 30px;
         }
 
-        @keyframes slideIn { from { transform: translateY(100px); } to { transform: translateY(0); } }
+        /* 动画 */
+        @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+        @keyframes slideUp { from { opacity: 0; transform: translateY(20px); } to { opacity: 1; transform: translateY(0); } }
+
+        .back-btn {
+            background: none; border: 1px solid var(--text-dim); color: var(--text-dim);
+            padding: 5px 15px; border-radius: 20px; cursor: pointer; font-size: 12px;
+            transition: 0.2s;
+        }
+        .back-btn:hover { background: var(--text-dim); color: #000; }
+
     </style>
 </head>
 <body>
 
 <div id="app">
     <div class="sidebar">
-        <div class="brand">
-            <i class="fa-solid fa-bullseye"></i>
-            <span>METRO TACTICS</span>
+        <div class="brand" @click="viewMode = 'dashboard'">
+            <i class="fa-solid fa-layer-group"></i> 
+            METRO DATA
+            <span style="font-size:10px; opacity:0.5; display:block; margin-top:5px;">点击此处返回总览</span>
         </div>
+        
+        <div class="search-container">
+            <input type="text" class="search-input" v-model="searchQuery" placeholder="搜索武器...">
+        </div>
+
         <div class="weapon-list">
-            <div v-for="w in weapons" :key="w.id" 
-                 class="weapon-item" 
-                 :class="{ active: currentWeapon.id === w.id, comparing: compareWeapon && compareWeapon.id === w.id }"
+            <div v-for="w in filteredWeapons" :key="w.id" 
+                 class="nav-item"
+                 :class="{ active: currentWeapon && currentWeapon.id === w.id && viewMode === 'detail' }"
                  @click="selectWeapon(w)">
-                <div>
-                    <div style="font-weight:bold; font-size:14px;">{{ w.name }}</div>
-                    <span class="tier-tag" :class="w.tier.toLowerCase()">{{ w.tier }}</span>
-                    <span style="font-size:11px; color:#666; margin-left:5px;">{{ w.type }}</span>
+                <div style="display:flex; flex-direction:column;">
+                    <span style="font-weight:bold; font-size:14px;">{{ w.name }}</span>
+                    <span style="font-size:11px; color:#666">{{ w.type }}</span>
                 </div>
-                <div v-if="currentWeapon.id !== w.id" 
-                     @click.stop="toggleCompare(w)" 
-                     style="font-size:12px; color:#555; cursor:pointer; padding:5px;">
-                     VS
-                </div>
+                <div class="tier-dot" :style="{color: getTierColor(w.tier), backgroundColor: getTierColor(w.tier)}"></div>
             </div>
         </div>
     </div>
 
-    <div class="main-view">
-        <div class="header">
-            <div class="weapon-title">
-                <span class="type">{{ currentWeapon.manufacturer }} // {{ currentWeapon.type }}</span>
-                <h1>{{ currentWeapon.name }}</h1>
+    <div class="main-content">
+        
+        <div v-if="viewMode === 'dashboard'" class="dashboard-view">
+            <div style="margin-bottom: 20px;">
+                <h1 style="color: var(--text-bright); margin:0; font-size:32px;">METRO META SNAPSHOT</h1>
+                <p style="color: var(--text-dim); margin:5px 0;">全服武器生态分布图：使用率 (Pick Rate) vs 压制胜率 (Win Rate)</p>
             </div>
-            <div class="tier-badge-lg" :class="currentWeapon.tier.toLowerCase()">
-                {{ currentWeapon.tier }}
+
+            <div class="chart-container-lg">
+                <canvas id="metaChart"></canvas>
+            </div>
+            
+            <div class="card-grid" style="margin-top:30px;">
+                <div class="info-card">
+                    <div class="card-title">T0 众神殿 (High Pick/High Win)</div>
+                    <div style="font-size:13px; line-height:1.6;">
+                        <span v-for="w in getWeaponsByTier('T0')" :key="w.id" 
+                              style="color:var(--t0); border:1px solid var(--t0); padding:2px 6px; border-radius:4px; margin-right:5px; display:inline-block;">
+                            {{ w.name }}
+                        </span>
+                    </div>
+                </div>
+                <div class="info-card">
+                    <div class="card-title">冷门绝活 (Low Pick/High Win)</div>
+                    <div style="font-size:13px; line-height:1.6;">
+                        <span v-for="w in highWinLowPick" :key="w.id" 
+                              style="color:var(--t1); border:1px solid var(--t1); padding:2px 6px; border-radius:4px; margin-right:5px; display:inline-block;">
+                            {{ w.name }}
+                        </span>
+                    </div>
+                </div>
             </div>
         </div>
 
-        <div class="grid-layout">
-            
-            <div style="display: flex; flex-direction: column; gap: 20px;">
-                
-                <div class="card">
-                    <h3>
-                        <i class="fa-solid fa-globe"></i> 生态位评估 (Meta Stats)
-                    </h3>
-                    
-                    <div class="meta-row">
-                        <div class="meta-label">
-                            <span>全服使用率 (Pick Rate)</span>
-                            <span>{{ currentWeapon.pickRate }}%</span>
-                        </div>
-                        <div class="progress-bg">
-                            <div class="progress-bar bar-primary" :style="{ width: currentWeapon.pickRate + '%' }"></div>
-                            <div v-if="compareWeapon" class="progress-bar bar-compare" :style="{ width: compareWeapon.pickRate + '%' }"></div>
-                        </div>
-                    </div>
+        <div v-else class="detail-view">
+            <button class="back-btn" @click="viewMode = 'dashboard'">
+                <i class="fa-solid fa-arrow-left"></i> 返回总览
+            </button>
 
-                    <div class="meta-row">
-                        <div class="meta-label">
-                            <span>正面刚枪胜率 (Duel Win%)</span>
-                            <span :style="{color: currentWeapon.winRate > 50 ? '#00b894' : '#ff7675'}">{{ currentWeapon.winRate }}%</span>
-                        </div>
-                        <div class="progress-bg">
-                            <div class="progress-bar bar-primary" :style="{ width: currentWeapon.winRate + '%' }"></div>
-                            <div v-if="compareWeapon" class="progress-bar bar-compare" :style="{ width: compareWeapon.winRate + '%' }"></div>
-                        </div>
-                    </div>
-
-                    <div class="meta-row">
-                        <div class="meta-label">
-                            <span>携带撤离率 (Extraction%)</span>
-                            <span>{{ currentWeapon.extractRate }}%</span>
-                        </div>
-                        <div class="progress-bg">
-                            <div class="progress-bar bar-primary" :style="{ width: currentWeapon.extractRate + '%' }"></div>
-                            <div v-if="compareWeapon" class="progress-bar bar-compare" :style="{ width: compareWeapon.extractRate + '%' }"></div>
-                        </div>
-                    </div>
+            <div class="header-section" style="margin-top:10px;">
+                <div>
+                    <div class="weapon-meta">{{ currentWeapon.type }} // {{ currentWeapon.ammo }}mm</div>
+                    <h1 class="weapon-name">{{ currentWeapon.name }}</h1>
                 </div>
-
-                <div class="card">
-                    <h3><i class="fa-solid fa-microchip"></i> 战术参数 (Specs)</h3>
-                    <div class="tech-specs">
-                        <div class="spec-item">
-                            <div class="spec-val">{{ currentWeapon.reload }}s</div>
-                            <div class="spec-key">换弹时间</div>
-                        </div>
-                        <div class="spec-item">
-                            <div class="spec-val">{{ currentWeapon.mag }}</div>
-                            <div class="spec-key">弹夹容量 (扩容)</div>
-                        </div>
-                        <div class="spec-item">
-                            <div class="spec-val">{{ currentWeapon.ads }}ms</div>
-                            <div class="spec-key">开镜速度</div>
-                        </div>
-                        <div class="spec-item">
-                            <div class="spec-val">{{ currentWeapon.bulletSpeed }}</div>
-                            <div class="spec-key">弹速 (m/s)</div>
-                        </div>
-                    </div>
+                <div class="tier-badge" :style="{backgroundColor: getTierColor(currentWeapon.tier)}">
+                    {{ currentWeapon.tier }}
                 </div>
-
-                <div class="card">
-                    <h3><i class="fa-solid fa-skull"></i> 6级甲 TTK</h3>
-                    <div style="font-size: 36px; font-weight: bold; color: var(--tier-1);">
-                        {{ currentWeapon.ttk_lv6 }}s
-                    </div>
-                    <div style="font-size: 12px; color: #666;">击倒全装敌人所需理论时间</div>
-                </div>
-
             </div>
 
-            <div class="card" style="display:flex; flex-direction:column;">
-                <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:15px;">
-                    <div class="canvas-tabs">
-                        <div class="tab-btn" :class="{active: viewMode === 'spread'}" @click="viewMode = 'spread'">
-                            <i class="fa-solid fa-person"></i> 散布着弹 (Dummy)
+            <div class="card-grid">
+                <div class="info-card">
+                    <div class="card-title">生态位数据 (Meta Stats)</div>
+                    
+                    <div class="stat-row">
+                        <div class="stat-header">
+                            <span>使用率 (Pick Rate)</span>
+                            <span>{{ currentWeapon.pickRate }}%</span>
                         </div>
-                        <div class="tab-btn" :class="{active: viewMode === 'path'}" @click="viewMode = 'path'">
-                            <i class="fa-solid fa-arrow-trend-up"></i> 后坐力轨迹 (Path)
-                        </div>
+                        <div class="bar-track"><div class="bar-fill" :style="{width: currentWeapon.pickRate + '%', background: '#66fcf1'}"></div></div>
                     </div>
-                    <div style="color:var(--accent); font-weight:bold;">{{ distance }}m</div>
+                    
+                    <div class="stat-row">
+                        <div class="stat-header">
+                            <span>对枪胜率 (Win Rate)</span>
+                            <span :style="{color: currentWeapon.winRate > 50 ? '#2ecc71' : '#e74c3c'}">{{ currentWeapon.winRate }}%</span>
+                        </div>
+                        <div class="bar-track"><div class="bar-fill" :style="{width: currentWeapon.winRate + '%', background: currentWeapon.winRate > 50 ? '#2ecc71' : '#e74c3c'}"></div></div>
+                    </div>
+
+                    <div class="stat-row">
+                        <div class="stat-header">
+                            <span>成功撤离率 (Extract)</span>
+                            <span>{{ currentWeapon.extractRate }}%</span>
+                        </div>
+                        <div class="bar-track"><div class="bar-fill" :style="{width: currentWeapon.extractRate + '%', background: '#f1c40f'}"></div></div>
+                    </div>
                 </div>
 
-                <div class="canvas-wrapper" id="canvasWrapper">
+                <div class="info-card">
+                    <div class="card-title">战术参数 (Specifications)</div>
+                    <div style="display:grid; grid-template-columns: 1fr 1fr; gap:15px;">
+                        <div>
+                            <div style="font-size:24px; font-weight:bold; color:white;">{{ currentWeapon.damage }}</div>
+                            <div style="font-size:12px; color:#888;">单发伤害</div>
+                        </div>
+                        <div>
+                            <div style="font-size:24px; font-weight:bold; color:white;">{{ currentWeapon.rate }}</div>
+                            <div style="font-size:12px; color:#888;">射速 (RPM)</div>
+                        </div>
+                        <div>
+                            <div style="font-size:24px; font-weight:bold; color:white;">{{ currentWeapon.reload }}s</div>
+                            <div style="font-size:12px; color:#888;">换弹时间</div>
+                        </div>
+                        <div>
+                            <div style="font-size:24px; font-weight:bold; color:var(--t1);">{{ currentWeapon.ttk_lv6 }}s</div>
+                            <div style="font-size:12px; color:#888;">6级甲 TTK</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="info-card">
+                <div class="card-title" style="justify-content: flex-start; gap:10px;">
+                    <span>弹道散布实验室</span>
+                    <span style="color:var(--text-bright)">{{ distance }}m</span>
+                </div>
+                
+                <div class="canvas-box" id="canvasWrapper">
                     <canvas id="ballisticCanvas"></canvas>
                 </div>
 
-                <div style="margin-top: 20px; display: flex; align-items: center; gap: 15px;">
-                    <i class="fa-solid fa-ruler"></i>
-                    <input type="range" v-model.number="distance" min="10" max="150" step="10" style="flex:1; accent-color: var(--accent);">
+                <div class="canvas-controls">
+                    <i class="fa-solid fa-crosshairs"></i>
+                    <input type="range" v-model.number="distance" min="10" max="150" step="10" style="flex:1; accent-color: var(--text-bright);">
+                    <span style="width:50px; text-align:right;">{{ distance }}m</span>
+                </div>
+                <div style="text-align:center; font-size:12px; color:#666; margin-top:10px;">
+                    * 显示基于 {{ currentWeapon.recoilType }} 类型的 30 发连射模拟散布
                 </div>
             </div>
-
         </div>
-    </div>
 
-    <div v-if="compareWeapon" class="compare-float" @click="compareWeapon = null">
-        <span>正在对比: {{ compareWeapon.name }}</span>
-        <i class="fa-solid fa-xmark"></i>
     </div>
 </div>
 
 <script>
-const { createApp, ref, onMounted, watch, nextTick } = Vue;
+const { createApp, ref, computed, onMounted, watch, nextTick } = Vue;
 
 createApp({
     setup() {
-        // ------------------------------------------------
-        // 1. 数据定义 (T0-T3 生态位 & 更多参数)
-        // ------------------------------------------------
-        const weapons = [
-            { 
-                id: 'mk14', name: 'MK14 (独眼蛇)', type: 'DMR', tier: 'T0', manufacturer: 'Drop',
-                pickRate: 15, winRate: 78, extractRate: 45,
-                damage: 61, rate: 650, bulletSpeed: 853, 
-                reload: 2.8, mag: 20, ads: 350, ttk_lv6: 0.28,
-                patternType: 'vertical_heavy' // 剧烈垂直
-            },
-            { 
-                id: 'mg3', name: 'MG3 (轻机枪)', type: 'LMG', tier: 'T0', manufacturer: 'Drop',
-                pickRate: 12, winRate: 82, extractRate: 50,
-                damage: 40, rate: 990, bulletSpeed: 820, 
-                reload: 7.0, mag: 75, ads: 450, ttk_lv6: 0.30,
-                patternType: 'linear_fast' // 快速线性
-            },
-            { 
-                id: 'm416', name: 'M416 (精制)', type: 'AR', tier: 'T1', manufacturer: 'Erangel',
-                pickRate: 65, winRate: 55, extractRate: 60,
-                damage: 41, rate: 780, bulletSpeed: 880, 
-                reload: 1.9, mag: 40, ads: 280, ttk_lv6: 0.42,
-                patternType: 'stable' // 稳定
-            },
-            { 
-                id: 'p90', name: 'P90 (钢铁)', type: 'SMG', tier: 'T1', manufacturer: 'Livik',
-                pickRate: 25, winRate: 68, extractRate: 55,
-                damage: 35, rate: 1000, bulletSpeed: 450, 
-                reload: 3.1, mag: 50, ads: 200, ttk_lv6: 0.35,
-                patternType: 'cluster' // 密集圆点
-            },
-            { 
-                id: 'awm', name: 'AWM (精制)', type: 'SR', tier: 'T1', manufacturer: 'Drop',
-                pickRate: 8, winRate: 40, extractRate: 70, // 老六枪，撤离率高但对枪胜率低
-                damage: 105, rate: 30, bulletSpeed: 945, 
-                reload: 3.5, mag: 7, ads: 400, ttk_lv6: 0.00, // 秒杀
-                patternType: 'single' // 单点
-            },
-            { 
-                id: 'akm', name: 'AKM', type: 'AR', tier: 'T2', manufacturer: 'Erangel',
-                pickRate: 40, winRate: 48, extractRate: 35,
-                damage: 48, rate: 600, bulletSpeed: 715, 
-                reload: 2.5, mag: 40, ads: 300, ttk_lv6: 0.48,
-                patternType: 'zigzag' // 左右抖动
-            },
-            { 
-                id: 'vector', name: 'Vector', type: 'SMG', tier: 'T2', manufacturer: 'Classic',
-                pickRate: 30, winRate: 60, extractRate: 30, // 跑刀仔，容易死
-                damage: 31, rate: 1100, bulletSpeed: 350, 
-                reload: 2.0, mag: 33, ads: 180, ttk_lv6: 0.32,
-                patternType: 'fast_rise' // 极速上扬
-            }
+        // ==========================================
+        // 1. 扩充后的数据库 (24把武器)
+        // ==========================================
+        const rawWeapons = [
+            // T0 God Tier
+            { name: 'MK14', type: 'DMR', tier: 'T0', ammo: 7.62, damage: 61, rate: 650, pickRate: 18, winRate: 72, extractRate: 45, reload: 2.8, ttk_lv6: 0.28, recoilType: 'extreme_v' },
+            { name: 'MG3', type: 'LMG', tier: 'T0', ammo: 7.62, damage: 40, rate: 990, pickRate: 12, winRate: 75, extractRate: 48, reload: 7.0, ttk_lv6: 0.30, recoilType: 'linear' },
+            { name: 'P90', type: 'SMG', tier: 'T0', ammo: 5.7, damage: 35, rate: 1000, pickRate: 22, winRate: 68, extractRate: 55, reload: 3.1, ttk_lv6: 0.35, recoilType: 'cluster' },
+            { name: 'AWM', type: 'SR', tier: 'T0', ammo: .300, damage: 105, rate: 30, pickRate: 8, winRate: 45, extractRate: 65, reload: 3.5, ttk_lv6: 0.0, recoilType: 'single' },
+
+            // T1 Strong Meta
+            { name: 'M416', type: 'AR', tier: 'T1', ammo: 5.56, damage: 41, rate: 780, pickRate: 62, winRate: 52, extractRate: 58, reload: 1.9, ttk_lv6: 0.42, recoilType: 'stable' },
+            { name: 'GROZA', type: 'AR', tier: 'T1', ammo: 7.62, damage: 47, rate: 750, pickRate: 9, winRate: 60, extractRate: 40, reload: 2.4, ttk_lv6: 0.32, recoilType: 'heavy_kick' },
+            { name: 'FAMAS', type: 'AR', tier: 'T1', ammo: 5.56, damage: 38, rate: 900, pickRate: 5, winRate: 58, extractRate: 42, reload: 3.2, ttk_lv6: 0.38, recoilType: 'fast_jitter' },
+            { name: 'AUG', type: 'AR', tier: 'T1', ammo: 5.56, damage: 41, rate: 700, pickRate: 15, winRate: 54, extractRate: 55, reload: 2.8, ttk_lv6: 0.43, recoilType: 'laser' },
+
+            // T2 Viable
+            { name: 'AKM', type: 'AR', tier: 'T2', ammo: 7.62, damage: 48, rate: 600, pickRate: 45, winRate: 48, extractRate: 35, reload: 2.5, ttk_lv6: 0.48, recoilType: 'heavy_kick' },
+            { name: 'M762', type: 'AR', tier: 'T2', ammo: 7.62, damage: 46, rate: 690, pickRate: 35, winRate: 49, extractRate: 38, reload: 2.6, ttk_lv6: 0.40, recoilType: 'zigzag' },
+            { name: 'Vector', type: 'SMG', tier: 'T2', ammo: 9, damage: 31, rate: 1100, pickRate: 28, winRate: 55, extractRate: 25, reload: 2.0, ttk_lv6: 0.32, recoilType: 'fast_rise' },
+            { name: 'DP-28', type: 'LMG', tier: 'T2', ammo: 7.62, damage: 51, rate: 550, pickRate: 15, winRate: 45, extractRate: 40, reload: 4.5, ttk_lv6: 0.50, recoilType: 'stable' },
+            { name: 'SCAR-L', type: 'AR', tier: 'T2', ammo: 5.56, damage: 41, rate: 690, pickRate: 30, winRate: 47, extractRate: 50, reload: 2.0, ttk_lv6: 0.45, recoilType: 'stable' },
+            { name: 'UMP45', type: 'SMG', tier: 'T2', ammo: .45, damage: 41, rate: 650, pickRate: 35, winRate: 45, extractRate: 45, reload: 2.2, ttk_lv6: 0.55, recoilType: 'stable' },
+            { name: 'DBS', type: 'SG', tier: 'T2', ammo: 12, damage: 240, rate: 100, pickRate: 10, winRate: 60, extractRate: 30, reload: 5.0, ttk_lv6: 0.1, recoilType: 'shotgun' },
+            { name: 'Mk47', type: 'AR', tier: 'T2', ammo: 7.62, damage: 49, rate: 500, pickRate: 3, winRate: 40, extractRate: 30, reload: 2.8, ttk_lv6: 0.5, recoilType: 'tap' },
+
+            // T3 Niche / Weak
+            { name: 'UZI', type: 'SMG', tier: 'T3', ammo: 9, damage: 26, rate: 1200, pickRate: 20, winRate: 42, extractRate: 20, reload: 1.8, ttk_lv6: 0.45, recoilType: 'fast_rise' },
+            { name: 'Bizon', type: 'SMG', tier: 'T3', ammo: 9, damage: 35, rate: 700, pickRate: 12, winRate: 35, extractRate: 45, reload: 3.0, ttk_lv6: 0.6, recoilType: 'stable' },
+            { name: 'Tommy', type: 'SMG', tier: 'T3', ammo: .45, damage: 40, rate: 750, pickRate: 8, winRate: 40, extractRate: 35, reload: 3.0, ttk_lv6: 0.52, recoilType: 'messy' },
+            { name: 'G36C', type: 'AR', tier: 'T3', ammo: 5.56, damage: 41, rate: 700, pickRate: 5, winRate: 45, extractRate: 50, reload: 2.4, ttk_lv6: 0.45, recoilType: 'stable' },
+            { name: 'QBZ', type: 'AR', tier: 'T3', ammo: 5.56, damage: 41, rate: 750, pickRate: 8, winRate: 46, extractRate: 48, reload: 2.2, ttk_lv6: 0.44, recoilType: 'stable' },
+            { name: 'M16A4', type: 'AR', tier: 'T3', ammo: 5.56, damage: 43, rate: 500, pickRate: 10, winRate: 30, extractRate: 35, reload: 2.0, ttk_lv6: 0.6, recoilType: 'tap' },
+            { name: 'SKS', type: 'DMR', tier: 'T3', ammo: 7.62, damage: 53, rate: 400, pickRate: 12, winRate: 38, extractRate: 40, reload: 2.5, ttk_lv6: 0.6, recoilType: 'jumpy' },
+            { name: 'Mini14', type: 'DMR', tier: 'T3', ammo: 5.56, damage: 46, rate: 450, pickRate: 15, winRate: 35, extractRate: 55, reload: 2.5, ttk_lv6: 0.65, recoilType: 'stable' }
         ];
 
-        const currentWeapon = ref(weapons[0]);
-        const compareWeapon = ref(null);
-        const distance = ref(25);
-        const viewMode = ref('spread'); // 'spread' (着弹点) or 'path' (轨迹)
+        // 添加ID
+        const weapons = rawWeapons.map((w, i) => ({...w, id: i}));
 
-        // ------------------------------------------------
-        // 2. 绘图逻辑 (假人绘制 & 弹道)
-        // ------------------------------------------------
-        
-        // 生成固定弹道数据
-        const generatePattern = (w) => {
-            const pts = [];
-            let x = 0, y = 0;
-            let vRecoil = 0; // 垂直力度
-            let hRecoil = 0; // 水平力度
-            let bloomBase = 0; // 基础散布
+        const viewMode = ref('dashboard'); // 'dashboard' or 'detail'
+        const currentWeapon = ref(null);
+        const searchQuery = ref('');
+        const distance = ref(50);
+        let chartInstance = null;
 
-            // 根据类型定义手感
-            if(w.patternType === 'vertical_heavy') { vRecoil = 4.5; hRecoil = 2.0; bloomBase = 1.5; }
-            else if(w.patternType === 'linear_fast') { vRecoil = 3.0; hRecoil = 0.5; bloomBase = 0.8; }
-            else if(w.patternType === 'stable') { vRecoil = 2.0; hRecoil = 0.8; bloomBase = 0.5; }
-            else if(w.patternType === 'cluster') { vRecoil = 1.5; hRecoil = 0.5; bloomBase = 2.0; }
-            else if(w.patternType === 'single') { vRecoil = 0; hRecoil = 0; bloomBase = 0.1; }
-            else if(w.patternType === 'zigzag') { vRecoil = 3.5; hRecoil = 3.5; bloomBase = 1.2; }
-            else { vRecoil = 3; hRecoil = 1; bloomBase = 1; }
+        // ==========================================
+        // 2. 逻辑处理
+        // ==========================================
 
-            for(let i=0; i<30; i++) {
-                if(w.type === 'SR' && i>0) break; 
-                
-                // 轨迹逻辑
-                y -= vRecoil * (1 + i*0.02); // 垂直叠加
-                x += (Math.sin(i * 0.8) * hRecoil) + (Math.random()-0.5)*0.5; // S型水平 + 随机
+        const filteredWeapons = computed(() => {
+            if(!searchQuery.value) return weapons;
+            return weapons.filter(w => w.name.toLowerCase().includes(searchQuery.value.toLowerCase()));
+        });
 
-                pts.push({ x, y, bloom: bloomBase });
+        const highWinLowPick = computed(() => {
+            // 筛选胜率>55 但使用率<15的枪
+            return weapons.filter(w => w.winRate > 55 && w.pickRate < 15);
+        });
+
+        const getWeaponsByTier = (tier) => weapons.filter(w => w.tier === tier);
+
+        const getTierColor = (tier) => {
+            switch(tier) {
+                case 'T0': return '#f1c40f';
+                case 'T1': return '#e74c3c';
+                case 'T2': return '#9b59b6';
+                default: return '#95a5a6';
             }
-            w.pattern = pts;
-        };
-        weapons.forEach(generatePattern);
-
-        // 绘制假人 (Canvas Path)
-        const drawDummy = (ctx, cx, cy, scale) => {
-            ctx.save();
-            ctx.translate(cx, cy);
-            ctx.scale(scale, scale);
-            ctx.strokeStyle = '#444';
-            ctx.fillStyle = '#222';
-            ctx.lineWidth = 2;
-
-            // 绘制轮廓 (简化版 PUBG 靶场假人)
-            ctx.beginPath();
-            // 头
-            ctx.arc(0, -60, 15, 0, Math.PI*2); 
-            // 肩膀
-            ctx.moveTo(-25, -40);
-            ctx.quadraticCurveTo(0, -50, 25, -40);
-            // 躯干
-            ctx.lineTo(25, 40);
-            ctx.lineTo(-25, 40);
-            ctx.lineTo(-25, -40);
-            
-            ctx.fill();
-            ctx.stroke();
-
-            // 致命区域 (头+胸) 高亮
-            ctx.fillStyle = 'rgba(255, 71, 87, 0.1)';
-            ctx.beginPath();
-            ctx.arc(0, -60, 15, 0, Math.PI*2);
-            ctx.fill();
-            
-            ctx.fillStyle = 'rgba(255, 255, 255, 0.05)';
-            ctx.fillRect(-20, -35, 40, 50);
-
-            ctx.restore();
         };
 
-        const draw = () => {
+        const selectWeapon = (w) => {
+            currentWeapon.value = w;
+            viewMode.value = 'detail';
+            // 等待DOM更新后重绘Canvas
+            nextTick(() => {
+                drawBallistics();
+            });
+        };
+
+        // ==========================================
+        // 3. 宏观散点图 (Chart.js)
+        // ==========================================
+        const initDashboardChart = () => {
+            const ctx = document.getElementById('metaChart');
+            if(!ctx) return;
+
+            // 销毁旧图表防止重影
+            if(chartInstance) {
+                chartInstance.destroy();
+                chartInstance = null;
+            }
+
+            const dataPoints = weapons.map(w => ({
+                x: w.pickRate,
+                y: w.winRate,
+                w: w // 存储完整对象以便回调使用
+            }));
+
+            chartInstance = new Chart(ctx, {
+                type: 'bubble', // 使用Bubble模拟Scatter，方便控制点的大小
+                data: {
+                    datasets: [{
+                        label: 'Weapon Meta',
+                        data: dataPoints.map(d => ({
+                            x: d.x,
+                            y: d.y,
+                            r: d.w.tier === 'T0' ? 12 : (d.w.tier === 'T1' ? 8 : 5) // T0的点更大
+                        })),
+                        backgroundColor: dataPoints.map(d => getTierColor(d.w.tier)),
+                        borderColor: 'rgba(0,0,0,0.5)',
+                        borderWidth: 1
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    scales: {
+                        x: {
+                            title: { display: true, text: '使用率 (Pick Rate %)', color: '#666' },
+                            grid: { color: '#333' },
+                            ticks: { color: '#888' }
+                        },
+                        y: {
+                            title: { display: true, text: '压制胜率 (Win Rate %)', color: '#666' },
+                            grid: { color: '#333' },
+                            ticks: { color: '#888' }
+                        }
+                    },
+                    plugins: {
+                        legend: { display: false },
+                        tooltip: {
+                            backgroundColor: 'rgba(20,20,20, 0.9)',
+                            callbacks: {
+                                label: function(context) {
+                                    const w = dataPoints[context.dataIndex].w;
+                                    return `${w.name} (${w.tier}): Pick ${w.pickRate}% / Win ${w.winRate}%`;
+                                }
+                            }
+                        }
+                    },
+                    onClick: (evt, elements) => {
+                        if(elements.length > 0) {
+                            const idx = elements[0].index;
+                            selectWeapon(dataPoints[idx].w);
+                        }
+                    }
+                }
+            });
+        };
+
+        // ==========================================
+        // 4. 弹道绘制 (Canvas)
+        // ==========================================
+        const drawBallistics = () => {
             const canvas = document.getElementById('ballisticCanvas');
             const wrapper = document.getElementById('canvasWrapper');
             if(!canvas || !wrapper) return;
@@ -516,110 +541,84 @@ createApp({
             const ctx = canvas.getContext('2d');
             const w = canvas.width;
             const h = canvas.height;
+            const cx = w/2;
+            const cy = h/2 + 60;
+
+            ctx.clearRect(0,0,w,h);
+
+            // 1. 绘制假人 (根据距离缩放)
+            const scale = Math.max(0.2, 2.0 - (distance.value / 50));
             
-            ctx.clearRect(0, 0, w, h);
+            ctx.save();
+            ctx.translate(cx, cy);
+            ctx.scale(scale, scale);
+            ctx.fillStyle = '#222';
+            ctx.strokeStyle = '#444';
+            ctx.lineWidth = 2;
+            // 头
+            ctx.beginPath(); ctx.arc(0, -60, 15, 0, Math.PI*2); ctx.fill(); ctx.stroke();
+            // 身
+            ctx.beginPath(); ctx.rect(-25, -40, 50, 80); ctx.fill(); ctx.stroke();
+            // 红色核心区
+            ctx.fillStyle = 'rgba(255, 0, 0, 0.2)';
+            ctx.beginPath(); ctx.arc(0, -60, 15, 0, Math.PI*2); ctx.fill();
+            ctx.restore();
 
-            const cx = w / 2;
-            const cy = h / 2 + 50; // 稍微靠下
-
-            // 模式1: 散布着弹 (Dummy View)
-            if (viewMode.value === 'spread') {
-                // 1. 画假人
-                // 距离越远，假人越小 (透视)
-                // 假设 10m 时 scale = 2.0, 100m 时 scale = 0.5
-                const dummyScale = Math.max(0.3, 2.5 - (distance.value / 40));
-                drawDummy(ctx, cx, cy, dummyScale);
-
-                // 2. 画弹孔
-                const drawHits = (weapon, color) => {
-                    ctx.fillStyle = color;
-                    weapon.pattern.forEach(pt => {
-                        // 在散布模式下，我们假设玩家在努力压枪，所以中心点不变
-                        // 变化的是"Bloom" (随机扩散)，距离越远扩散越大
-                        
-                        // 距离带来的散布放大系数
-                        const spreadFactor = distance.value * 0.8; 
-                        
-                        // 每一发的随机落点
-                        const randAngle = Math.random() * Math.PI * 2;
-                        const randDist = Math.random() * pt.bloom * spreadFactor;
-                        
-                        const hitX = cx + Math.cos(randAngle) * randDist;
-                        const hitY = cy - 60 * dummyScale + Math.sin(randAngle) * randDist; // 瞄准头部(-60)
-
-                        ctx.beginPath();
-                        ctx.arc(hitX, hitY, 3, 0, Math.PI*2);
-                        ctx.fill();
-                    });
-                };
-
-                if(compareWeapon.value) drawHits(compareWeapon.value, 'rgba(255, 71, 87, 0.6)');
-                drawHits(currentWeapon.value, '#00e5ff');
-            }
+            // 2. 绘制散布
+            const spread = (distance.value / 20); // 距离越远散布越大
+            const weapon = currentWeapon.value;
             
-            // 模式2: 后坐力轨迹 (Path View)
-            else {
-                // 画网格
-                ctx.strokeStyle = '#222';
+            ctx.fillStyle = '#66fcf1';
+            
+            // 模拟30发
+            for(let i=0; i<30; i++) {
+                if(weapon.type === 'SR' && i>0) break;
+
+                let dx = 0, dy = 0;
+
+                // 极简后坐力逻辑
+                if(weapon.recoilType === 'stable') { dx = (Math.random()-0.5)*10; dy = -i*2; }
+                else if(weapon.recoilType === 'linear') { dx = (Math.random()-0.5)*5; dy = -i*3; }
+                else if(weapon.recoilType === 'extreme_v') { dx = (Math.random()-0.5)*20; dy = -i*5; }
+                else if(weapon.recoilType === 'cluster') { dx = (Math.random()-0.5)*15; dy = (Math.random()-0.5)*15; }
+                else { dx = (Math.random()-0.5)*20; dy = -i*3 + (Math.random()-0.5)*10; }
+
+                // 叠加距离带来的Bloom
+                const bloom = (Math.random()-0.5) * spread * (100-weapon.rate/20); 
+                
+                const x = cx + dx * scale + bloom;
+                const y = cy + dy * scale + bloom;
+
                 ctx.beginPath();
-                for(let i=0; i<w; i+=50) { ctx.moveTo(i,0); ctx.lineTo(i,h); }
-                for(let i=0; i<h; i+=50) { ctx.moveTo(0,i); ctx.lineTo(w,i); }
-                ctx.stroke();
-
-                const drawPath = (weapon, color) => {
-                    ctx.strokeStyle = color;
-                    ctx.lineWidth = 2;
-                    ctx.beginPath();
-                    
-                    // 轨迹模式下，模拟"不压枪"的上扬
-                    // 距离不影响轨迹形状，只影响"视觉大小"吗？
-                    // 通常轨迹图展示的是“鼠标移动路径”的反向，这里我们展示“弹道上扬”
-                    
-                    let startX = cx;
-                    let startY = h - 50;
-                    ctx.moveTo(startX, startY);
-
-                    weapon.pattern.forEach(pt => {
-                        // 放大系数便于观察
-                        const zoom = 3.0; 
-                        ctx.lineTo(startX + pt.x * zoom, startY + pt.y * zoom);
-                    });
-                    ctx.stroke();
-                };
-
-                if(compareWeapon.value) drawPath(compareWeapon.value, '#ff4757');
-                drawPath(currentWeapon.value, '#00e5ff');
+                ctx.arc(x, y, 3, 0, Math.PI*2);
+                ctx.fill();
             }
         };
 
-        // ------------------------------------------------
-        // 3. 交互逻辑
-        // ------------------------------------------------
-        const selectWeapon = (w) => {
-            currentWeapon.value = w;
-            if(compareWeapon.value && compareWeapon.value.id === w.id) compareWeapon.value = null;
-            nextTick(draw);
-        };
+        // 监听视图切换
+        watch(viewMode, (newVal) => {
+            if(newVal === 'dashboard') {
+                nextTick(initDashboardChart);
+            }
+        });
 
-        const toggleCompare = (w) => {
-            compareWeapon.value = (compareWeapon.value && compareWeapon.value.id === w.id) ? null : w;
-            nextTick(draw);
-        };
+        watch(distance, drawBallistics);
 
-        watch([distance, viewMode], draw);
         onMounted(() => {
-            draw();
-            window.addEventListener('resize', draw);
+            initDashboardChart();
         });
 
         return {
-            weapons,
+            weapons: filteredWeapons,
+            filteredWeapons,
             currentWeapon,
-            compareWeapon,
-            distance,
             viewMode,
+            distance,
+            searchQuery,
             selectWeapon,
-            toggleCompare
+            getTierColor,
+            getWeaponsByTier,
+            highWinLowPick
         };
     }
 }).mount('#app');
